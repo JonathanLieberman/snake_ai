@@ -1,14 +1,9 @@
 computer_snake <- function(rows = 10, columns = 10) {
   # Initialize first position
-  #pos <- as.matrix(new_pos(rows, columns))
-  half_row <-  floor(rows/2)
-  half_col <-  floor(columns/2)
-  pos <- matrix(c(half_col, half_row, half_col, half_row-1), nrow = 2)
-  rownames(pos) <- c("x", "y")
+  pos <- new_pos(rows, columns)
   
   # Initialize dot position
   dot_pos <- pick_new_dot_pos(pos, rows, columns)
-  # rownames(dot_pos) <- c("x", "y")
   
   # Initialize self-intersection flag
   self_intersect <- FALSE
@@ -16,10 +11,12 @@ computer_snake <- function(rows = 10, columns = 10) {
   # Initialize dot-intesection flag
   dot_intersect <- FALSE
   
+  # Print start location
+  print(pos)
+  print(dot_pos)
+  
   while(!self_intersect) {
     # Print position
-    print(pos)
-    print(dot_pos)
     
     # Get input command
     direction <- choose_direction(pos, dot_pos)
@@ -41,11 +38,25 @@ computer_snake <- function(rows = 10, columns = 10) {
     dot_intersect <- output[[2]]
     self_intersect <- output[[3]]
     
+    # Print information
+    print(pos)
+    print(dot_pos)
+    print(self_intersect)
+    print(direction)
+    
     # If snake intersected, set flag to break loop
     if (dot_intersect) {
       dot_pos <- pick_new_dot_pos(pos, rows, columns)
       dot_intersect <- FALSE
     }
+    #frame <- plot_snake(pos
+    #                    , dot_pos
+    #                    , rows
+    #                    , columns
+    #                    )
+    #frame
+    plot(rbind(pos, dot_pos), xlim = c(0,rows-1), ylim = c(0,columns-1))
+    Sys.sleep(.3)
   }
   return(data_list)
 }
