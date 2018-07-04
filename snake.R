@@ -55,9 +55,9 @@ move <- function(pos, dot_pos, direction, rows, columns) {
 
 
 
-# NN input
-nn_input <- function(pos
-                     #, dot_pos
+# can_move checks the position data and returns whether moves are possible 
+can_move <- function(pos
+                     # , dot_pos
                      , rows
                      , columns
                      ) {
@@ -72,12 +72,46 @@ nn_input <- function(pos
     is_open[3] <- !any((pos[1,1] == chopped_pos[,1]) & ((pos[1,2] - 1) %% columns == chopped_pos[,2])) # check s
     is_open[4] <- !any(((pos[1,1] + 1) %% rows == chopped_pos[,1]) & (pos[1,2] == chopped_pos[,2])) # check d
   }
-  
-  # Shortest distance (up/down and left/right)
-  
+  is_open <- as.data.frame(t(is_open))
+  colnames(is_open) <- c('can_w'
+                         , 'can_a'
+                         , 'can_s'
+                         , 'can_d'
+                         )
   return(is_open)
 }
 
+
+get_distances <- function(pos
+                          , dot_pos
+                          , rows
+                          , columns
+                          ) {
+  # Shortest distance (up/down and left/right)
+  location <- pos[1,]
+  differences <- abs(location - dot_pos)
+  
+  
+  if (differences[1] <= rows/2){
+    x_distance <- dot_pos[1] - location[1]
+  } else {
+    x_distance <-  rows + dot_pos[1] - location[1]
+  }
+  
+  if (differences[2] <= columns/2){
+    y_distance <- dot_pos[2] - location[2]
+  } else {
+    y_distance <-  columns + dot_pos[2] - location[2]
+  }
+  
+  distances <- data.frame(cbind(x_distance, y_distance))
+  colnames(distances) <- colnames(dot_pos)
+  
+  min_steps_away <- sum(abs(distances))
+  
+  to_return <- list(distances, min_steps_away)
+  return(to_return)
+}
 
 
 # plot game
@@ -92,7 +126,39 @@ plot_snake <- function(pos
          #, ymax = columns - 1
          ) +
     geom_point(data = pos, aes(x = x, y = y)) +
-    geom_point(data = dot_pos, aes(x = x, y = y))
+    geom_point(data = dot_pos, aes(x = x, y = y, colour = "Red"))
   return(frame)
   # plot(rbind(pos,dot_pos))  
+}
+
+
+prep_data <-  function(move_data
+                       , rows
+                       , columns
+) {
+  # Determine success of move
+  successful_move <-  sign(-move_data$steps_change)
+  
+  # Overwrite success if necessary
+  if (move_data$died) successful_move <- -1
+  if (move_data$got_dot) successful_move <- 1
+  successful_move <- as.data.frame(successful_move)
+  
+  # Get possible movement directions
+  move_directions <- can_move(pos = move_data$snake_position
+                              , rows = rows
+                              , columns = columns
+                              )
+  
+  # Grab command of the move
+  command <- as.data.frame(move_data$command)
+  colnames(command) <- "command"
+  
+  # Get angle
+  angle <- atan2(move_data$distance_away[1,2], move_data$distance_away[1,1])
+  angle <- as.data.frame(angle)
+  colnames(angle) <- "angle"
+  
+  output <- cbind.data.frame(move_directions, command, angle, successful_move)
+  return(output)
 }

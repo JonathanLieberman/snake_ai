@@ -19,11 +19,11 @@ play_snake <- function(rows = 10, columns = 10) {
     # Get input command
     input <- readline(prompt = "Enter direction: ")
     
-    # Move
+    # Move and unpack
     output <- move(pos, dot_pos, input, rows, columns)
     pos <- output[[1]]
-    dot_intersect <- output[[2]]#as.logical(output[2])
-    self_intersect <- output[[3]]#as.logical(output[3])
+    dot_intersect <- output[[2]]
+    self_intersect <- output[[3]]
     if (dot_intersect) {
       dot_pos <- pick_new_dot_pos(pos, rows, columns)
       dot_intersect <- FALSE
