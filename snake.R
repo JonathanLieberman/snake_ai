@@ -95,13 +95,15 @@ get_distances <- function(pos
   if (differences[1] <= rows/2){
     x_distance <- dot_pos[1] - location[1]
   } else {
-    x_distance <-  rows + dot_pos[1] - location[1]
+    x_temp <- dot_pos[1] - location[1]
+    x_distance <-  (rows - abs(x_temp)) * sign(-x_temp) 
   }
   
   if (differences[2] <= columns/2){
     y_distance <- dot_pos[2] - location[2]
   } else {
-    y_distance <-  columns + dot_pos[2] - location[2]
+    y_temp <- dot_pos[2] - location[2]
+    y_distance <-  (columns - abs(y_temp)) * sign(-y_temp)
   }
   
   distances <- data.frame(cbind(x_distance, y_distance))
@@ -155,7 +157,7 @@ prep_data <-  function(move_data
   colnames(command) <- "command"
   
   # Get angle
-  angle <- atan2(move_data$distance_away[1,2], move_data$distance_away[1,1])
+  angle <- atan2(move_data$distance_away[1,2], move_data$distance_away[1,1])/pi
   angle <- as.data.frame(angle)
   colnames(angle) <- "angle"
   
