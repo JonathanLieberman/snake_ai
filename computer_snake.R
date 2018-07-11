@@ -1,5 +1,7 @@
-computer_snake <- function(rows = 10
+computer_snake <- function(how_played = "simple"
+                           , rows = 10
                            , columns = 10
+                           , neural_net_model = NULL
                            , do_plot = FALSE
                            , do_print = FALSE
                            ) {
