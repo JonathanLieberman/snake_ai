@@ -72,6 +72,8 @@ can_move <- function(pos
     is_open[3] <- !any((pos[1,1] == chopped_pos[,1]) & ((pos[1,2] - 1) %% columns == chopped_pos[,2])) # check s
     is_open[4] <- !any(((pos[1,1] + 1) %% rows == chopped_pos[,1]) & (pos[1,2] == chopped_pos[,2])) # check d
   }
+  # Convert to 1s and 0s for neural net
+  is_open <- as.numeric(is_open)
   is_open <- as.data.frame(t(is_open))
   colnames(is_open) <- c('can_w'
                          , 'can_a'
@@ -153,14 +155,20 @@ prep_data <-  function(move_data
                               )
   
   # Grab command of the move
+  # Convert direction to normalized angle, branch = negative real x-axis
   command <- as.data.frame(move_data$command)
-  colnames(command) <- "command"
+  if (command == "a") command_num <- 1
+  if (command == "w") command_num <- .5
+  if (command == "d") command_num <- 0
+  if (command == "s") command_num <- -.5
+  command_num <- data.frame(command_num)
+  colnames(command_num) <- "command"
   
   # Get angle
   angle <- atan2(move_data$distance_away[1,2], move_data$distance_away[1,1])/pi
   angle <- as.data.frame(angle)
   colnames(angle) <- "angle"
   
-  output <- cbind.data.frame(move_directions, command, angle, successful_move)
+  output <- cbind.data.frame(move_directions, command_num, angle, successful_move)
   return(output)
 }
