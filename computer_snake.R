@@ -5,6 +5,9 @@ computer_snake <- function(how_played = "simple"
                            , do_plot = FALSE
                            , do_print = FALSE
                            ) {
+  #Formula for neural_net
+  nn_formula <- "successful_move ~ can_w + can_a + can_s + can_d + command + angle"
+  
   # Initialize first position
   pos <- new_pos(rows, columns)
   
@@ -36,7 +39,12 @@ computer_snake <- function(how_played = "simple"
     pos_old <- pos
     
     # Get input command
-    direction <- choose_direction(pos, dot_pos)
+    direction <- choose_direction(pos = pos
+                                  , dot_pos = dot_pos
+                                  , how_played = how_played
+                                  , neural_net_model = neural_net_model
+                                  , neural_net_formula = neural_net_formula
+                                  )
     
     # Move and unpack
     output <- move(pos, dot_pos, direction, rows, columns)
@@ -124,6 +132,7 @@ computer_snake <- function(how_played = "simple"
       Sys.sleep(.3)
     }
   }
+  
   return(data_list)
 }
 

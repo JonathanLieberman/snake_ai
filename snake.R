@@ -57,7 +57,6 @@ move <- function(pos, dot_pos, direction, rows, columns) {
 
 # can_move checks the position data and returns whether moves are possible 
 can_move <- function(pos
-                     # , dot_pos
                      , rows
                      , columns
                      ) {
@@ -136,7 +135,7 @@ plot_snake <- function(pos
 }
 
 
-prep_data <-  function(move_data
+prep_training_data <-  function(move_data
                        , rows
                        , columns
 ) {
@@ -155,7 +154,7 @@ prep_data <-  function(move_data
                               )
   
   # Grab command of the move
-  # Convert direction to normalized angle, branch = negative real x-axis
+  # Convert direction to normalized angle, branch cut = negative real x-axis
   command <- as.data.frame(move_data$command)
   if (command == "a") command_num <- 1
   if (command == "w") command_num <- .5
