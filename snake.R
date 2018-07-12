@@ -139,8 +139,8 @@ prep_training_data <-  function(move_data
                        , rows
                        , columns
 ) {
-  # Determine success of move
-  successful_move <-  sign(-move_data$steps_change)
+  # Determine success of move 
+  successful_move <-  as.numeric(move_data$steps_change < 0)# * .75 +.25
   
   # Overwrite success if necessary
   if (move_data$died) successful_move <- -1
@@ -168,6 +168,10 @@ prep_training_data <-  function(move_data
   angle <- as.data.frame(angle)
   colnames(angle) <- "angle"
   
-  output <- cbind.data.frame(move_directions, command_num, angle, successful_move)
+  output <- cbind.data.frame(move_directions
+                             , command_num
+                             , angle
+                             , successful_move
+                             )
   return(output)
 }
