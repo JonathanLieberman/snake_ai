@@ -1,25 +1,87 @@
 choose_direction <- function(pos
                              , dot_pos
                              , how_played = "simple"
-                             , neural_net_model = NULL
+                             , model = NULL
                              , neural_net_formula = NULL
                              , rows = 10
                              , columns = 10
                              ) {
   if (how_played == "simple") {
-    if (pos[1,1] < dot_pos[1]) return('d')
-    if (pos[1,1] > dot_pos[1]) return('a')
-    if (pos[1,2] < dot_pos[2]) return('w')
-    if (pos[1,2] > dot_pos[2]) return('s')
+    
+    #Get current direction
+    direction <- as.matrix(pos[1,]-pos[2,])
+    
+    #Get distances to dot
+    distances <- dot_pos - pos[1,]
+    
+    #Get angle to dot
+    angle <- get_angle(distances, direction)
+    
+    if (angle > pi/4) return("r")
+    if (angle < -pi/4) return("l")
+    return("s")
+  }
+  
+  if (how_played == "xgboost") {
+    model_input <- can_move(pos = pos
+                         , dot_pos = dot_pos
+                         , rows = rows
+                         , columns = columns
+    )
+    
+    #Get current direction
+    direction <- as.matrix(pos[1,]-pos[2,])
+    
+    #Get distances to dot
+    distances <- dot_pos - pos[1,]
+    
+    #Save spot for command
+    model_input$command <- NA
+    
+    #Get angle to dot
+    angle <- get_angle(distances, direction)/pi
+    names(angle) <-  "angle"
+    
+    #Add angle to list of inputs
+    model_input$angle <- angle
+    
+    model_outputs <- data.frame(matrix(NA, nrow = 1, ncol = 3))
+    colnames(model_outputs) <- c("l_score"
+                                 , "s_score"
+                                 , "r_score"
+    )
+    
+    model_input = as.matrix(model_input)
+    
+    #Test l
+    model_input[1,colnames(model_input)=="command"] = 1
+    model_outputs$l_score <- predict(model, model_input)
+    
+    #Test s
+    model_input[1,colnames(model_input)=="command"] = 0
+    model_outputs$s_score <- predict(model, model_input)
+    
+    #Test r
+    model_input[1,colnames(model_input)=="command"] = -1
+    model_outputs$r_score <- predict(model, model_input)
+    
+    best_score <- max(model_outputs)
+    print(model_outputs)
+    print(best_score)
+    if (model_outputs$l_score == best_score) return("l")
+    if (model_outputs$s_score == best_score) return("s")
+    if (model_outputs$r_score == best_score) return("r")
   }
   
   if (how_played == "neural_net") {
     #Generate nueral_net input
     nn_input <- can_move(pos = pos
-                        , rows = rows
-                        , columns = columns
-                        )
+                         , dot_pos = dot_pos
+                         , rows = rows
+                         , columns = columns
+                         )
     print(nn_input)
+    
     #Get distances away
     distances <- get_distances(pos = pos
                                , dot_pos = dot_pos
@@ -30,38 +92,34 @@ choose_direction <- function(pos
     #Drop steps_away
     distances <- distances[[1]]
     
+    #CHANGE TO APPROPRIATE ANGLE
+    
     #Calculate best angle
     nn_input$angle <- atan2(distances[1,2], distances[1,1])/pi
     
-    model_outputs <- data.frame(matrix(NA, nrow = 1, ncol = 4))
-    colnames(model_outputs) <- c("w_score"
-                                 , "a_score"
+    model_outputs <- data.frame(matrix(NA, nrow = 1, ncol = 3))
+    colnames(model_outputs) <- c("l_score"
                                  , "s_score"
-                                 , "d_score"
+                                 , "r_score"
                                  )
     
-    #Test w
-    nn_input$command_num = .5
-    model_outputs$w_score <- compute(neural_net_model, nn_input)$net.result
-    
-    #Test a
+    #Test l
     nn_input$command_num = 1
-    model_outputs$a_score <- compute(neural_net_model, nn_input)$net.result
+    model_outputs$l_score <- compute(model, nn_input)$net.result
     
     #Test s
-    nn_input$command_num = -.5
-    model_outputs$s_score <- compute(neural_net_model, nn_input)$net.result
-    
-    #Test d
     nn_input$command_num = 0
-    model_outputs$d_score <- compute(neural_net_model, nn_input)$net.result
+    model_outputs$s_score <- compute(model, nn_input)$net.result
+    
+    #Test r
+    nn_input$command_num = -1
+    model_outputs$r_score <- compute(model, nn_input)$net.result
     
     best_score <- max(model_outputs)
     print(model_outputs)
     print(best_score)
-    if (model_outputs$w_score == best_score) return("w")
-    if (model_outputs$a_score == best_score) return("a")
+    if (model_outputs$l_score == best_score) return("l")
     if (model_outputs$s_score == best_score) return("s")
-    if (model_outputs$d_score == best_score) return("d")
+    if (model_outputs$r_score == best_score) return("r")
   }
 }

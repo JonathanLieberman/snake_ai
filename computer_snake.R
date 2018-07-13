@@ -1,15 +1,17 @@
 computer_snake <- function(how_played = "simple"
                            , rows = 10
                            , columns = 10
-                           , neural_net_model = NULL
+                           , model = NULL
                            , do_plot = FALSE
                            , do_print = FALSE
                            ) {
   #Formula for neural_net
-  nn_formula <- "successful_move ~ can_w + can_a + can_s + can_d + command + angle"
+  nn_formula <- "successful_move ~ can_l + can_s + can_r + command + angle"
   
   # Initialize first position
-  pos <- new_pos(rows, columns)
+  pos <- data.frame(cbind(c(round(rows/2),round(rows/2))
+                          , c(round(columns/2),round(columns/2)-1)))
+  colnames(pos) <-  c("x", "y")
   
   # Initialize dot position
   dot_pos <- pick_new_dot_pos(pos, rows, columns)
@@ -22,10 +24,11 @@ computer_snake <- function(how_played = "simple"
   recently_got_dot <- FALSE
   
   distances <- get_distances(pos = pos
-                                 , dot_pos = dot_pos
+                               , dot_pos = dot_pos
                                  , rows = rows
                                  , columns = columns
                                  )
+  
   old_distance_away <- distances[[1]]
   old_steps_away <-  distances[[2]]
   if (do_print) {
@@ -42,7 +45,7 @@ computer_snake <- function(how_played = "simple"
     direction <- choose_direction(pos = pos
                                   , dot_pos = dot_pos
                                   , how_played = how_played
-                                  , neural_net_model = neural_net_model
+                                  , model = model
                                   , neural_net_formula = neural_net_formula
                                   )
     
@@ -94,8 +97,10 @@ computer_snake <- function(how_played = "simple"
       # Print information
       print(pos)
       print(dot_pos)
+      print(dot_intersect)
       print(self_intersect)
       print(direction)
+      
     }
     
     # Save recently_got_dot

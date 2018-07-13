@@ -20,11 +20,14 @@ pick_new_dot_pos <- function(pos, rows, columns) {
 
 # Define function for moving
 move <- function(pos, dot_pos, direction, rows, columns) {
-  # Parse for direction movement
-  if (direction == 'd') mov_dir <- cbind(1, 0)
-  if (direction == 'a') mov_dir <- cbind(-1, 0)
-  if (direction == 's') mov_dir <- cbind(0, -1)
-  if (direction == 'w') mov_dir <- cbind(0, 1)
+  
+  current_direction <- t(pos[1,]-pos[2,])
+  
+  if (direction == "l") rotation_matrix <- matrix(c(0, 1, -1, 0), nrow = 2, ncol = 2)
+  if (direction == "s") rotation_matrix <- matrix(c(1, 0, 0, 1), nrow = 2, ncol = 2)
+  if (direction == "r") rotation_matrix <- matrix(c(0, -1, 1, 0), nrow = 2, ncol = 2)
+  
+  mov_dir <- t(rotation_matrix %*% current_direction)
   mov_dir <- as.data.frame(mov_dir)
   
   # Initialize new dot and intersect flags
@@ -32,23 +35,23 @@ move <- function(pos, dot_pos, direction, rows, columns) {
   intersect <- FALSE
   
   # Move
-  if (all(pos[1,] + mov_dir == dot_pos)) {
-    new_pos <- rbind(pos[1,] + mov_dir, pos)
+  # Deal with rolling borders
+  new_head <- pos[1,] + mov_dir
+  new_head[1,1] <- new_head[1,1]%%rows
+  new_head[1,2] <- new_head[1,2]%%columns
+  
+  if (all(new_head == dot_pos)) {
+    new_pos <- rbind(new_head, pos)
     new_dot <- TRUE
-  } else{
-    if (nrow(pos) == 1){
-      new_pos <- pos + mov_dir
-    } else {
-      new_pos <- rbind(pos[1,] + mov_dir, pos[-nrow(pos),])
-    }
+  } else {
+    new_pos <- rbind(new_head, pos[-nrow(pos),])
   }
   
-  # Deal with rolling borders
-  new_pos[,1] <- new_pos[,1]%%rows
-  new_pos[,2] <- new_pos[,2]%%columns
-  if (nrow(new_pos) > 1) {
-    if (any((new_pos[1,1] == new_pos[-1,1]) & (new_pos[1,2] == new_pos[-1,2]))) intersect <- TRUE
-  }
+  # new_pos[,1] <- new_pos[,1]%%rows
+  # new_pos[,2] <- new_pos[,2]%%columns
+  
+  # Test for self_intersect
+  if (any((new_pos[1,1] == new_pos[-1,1]) & (new_pos[1,2] == new_pos[-1,2]))) intersect <- TRUE
   to_return <- list(new_pos, new_dot, intersect)
   return(to_return)
 }
@@ -57,27 +60,31 @@ move <- function(pos, dot_pos, direction, rows, columns) {
 
 # can_move checks the position data and returns whether moves are possible 
 can_move <- function(pos
+                     , dot_pos
                      , rows
                      , columns
                      ) {
   # calculate whether position is open (w,a,s,d)
-  is_open <- vector(mode = "logical", length = 4)
-  if (nrow(pos) < 2) {
-    is_open <- !is_open
-  } else {
-    chopped_pos <- pos[c(-nrow(pos),-1),]
-    is_open[1] <- !any((pos[1,1] == chopped_pos[,1]) & ((pos[1,2] + 1) %% columns == chopped_pos[,2])) # check w
-    is_open[2] <- !any(((pos[1,1] - 1) %% rows == chopped_pos[,1]) & (pos[1,2] == chopped_pos[,2])) # check a
-    is_open[3] <- !any((pos[1,1] == chopped_pos[,1]) & ((pos[1,2] - 1) %% columns == chopped_pos[,2])) # check s
-    is_open[4] <- !any(((pos[1,1] + 1) %% rows == chopped_pos[,1]) & (pos[1,2] == chopped_pos[,2])) # check d
-  }
+  is_open <- vector(mode = "logical", length = 3)
+  
+  # test left
+  test <- move(pos = pos, dot_pos = dot_pos, direction = "r", rows = rows, columns = columns)
+  is_open[1] <- !test[[3]]
+  
+  # test straight
+  test <- move(pos = pos, dot_pos = dot_pos, direction = "s", rows = rows, columns = columns)
+  is_open[2] <- !test[[3]]
+  
+  # test right
+  test <- move(pos = pos, dot_pos = dot_pos, direction = "l", rows = rows, columns = columns)
+  is_open[3] <- !test[[3]]
+  
   # Convert to 1s and 0s for neural net
   is_open <- as.numeric(is_open)
   is_open <- as.data.frame(t(is_open))
-  colnames(is_open) <- c('can_w'
-                         , 'can_a'
+  colnames(is_open) <- c('can_r'
                          , 'can_s'
-                         , 'can_d'
+                         , 'can_l'
                          )
   return(is_open)
 }
@@ -149,6 +156,7 @@ prep_training_data <-  function(move_data
   
   # Get possible movement directions
   move_directions <- can_move(pos = move_data$snake_position
+                              , dot_pos = move_data$dot_position
                               , rows = rows
                               , columns = columns
                               )
@@ -156,10 +164,9 @@ prep_training_data <-  function(move_data
   # Grab command of the move
   # Convert direction to normalized angle, branch cut = negative real x-axis
   command <- as.data.frame(move_data$command)
-  if (command == "a") command_num <- 1
-  if (command == "w") command_num <- .5
-  if (command == "d") command_num <- 0
-  if (command == "s") command_num <- -.5
+  if (command == "r") command_num <- 1
+  if (command == "s") command_num <- 0
+  if (command == "l") command_num <- -1
   command_num <- data.frame(command_num)
   colnames(command_num) <- "command"
   
@@ -174,4 +181,12 @@ prep_training_data <-  function(move_data
                              , successful_move
                              )
   return(output)
+}
+
+#get_angle returns the angle between 2 vectors 
+get_angle <- function(direction, ref) {
+  angle <- acos((ref %*% t(direction))/(norm(ref, "2")*norm(direction, "2")))
+  pos_neg <- direction[1]*ref[2]-direction[2]*ref[1]
+  angle <- angle * sign(pos_neg)
+  return(angle)
 }
